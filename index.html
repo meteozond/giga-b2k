@@ -1,110 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Beeline to Keenetic eeprom/mtd2 converter</title>
     <meta charset="UTF-8">
+    <title>Beeline to Keenetic eeprom/mtd2 converter</title>
     <style>
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+            text-align: center;
             font-family: Arial, sans-serif;
+            padding: 50px;
         }
-        #downloadLink, .uploadButton {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #007BFF;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .logos {
-            display: flex;
-            gap: 20px;
-        }
-        img {
-            width: 200px;
-            height: auto;
-        }
-        #myFile {
+
+        .custom-file-input {
             display: none;
         }
+
+        label {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        label:hover {
+            background-color: #45a049;
+        }
+
         h1 {
-            text-align: center;
-            font-size: 2em;
-            margin-bottom: 20px;
+            color: #333;
+            font-size: 32px;
+        }
+
+        .images {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-bottom: 50px;
+        }
+
+        .images img {
+            width: 200px;
         }
     </style>
 </head>
 <body>
-
-<div class="logos">
-    <img id="beelineLogo" src="beeline.png">
-    <img id="keeneticLogo" src="keenetic.png">
+<div class="images">
+    <img src="beeline.png" alt="Beeline">
+    <img src="keenetic.png" alt="Keenetic">
 </div>
-
 <h1>Beeline to Keenetic eeprom/mtd2 converter</h1>
-
-<label for="myFile" class="uploadButton" id="uploadButton">Выбрать файл</label>
-<input type="file" id="myFile" onchange="loadFile()">
-
+<label for="file">Choose a file</label>
+<input class="custom-file-input" type="file" id="file" name="file">
 <script>
-  function loadFile() {
-    var input = document.getElementById('myFile');
-    var file = input.files[0];
-    var reader = new FileReader();
+  const handleFileSelect = (evt) => {
+    let file = evt.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      let arrayBuffer = event.target.result;
+      let dataView = new DataView(arrayBuffer);
 
-    reader.onload = function() {
-      var arrayBuffer = this.result;
-      var dataView = new DataView(arrayBuffer);
+      let macAddressOffset = 0x21000;
+      let macAddressLength = 6; // MAC address is 6 bytes (12 hex digits)
 
-      // 1. со смещения 0x21000 забираем мак-адрес роутера, 12 символов
-      var macAddressOffset = 0x21000;
-      var macAddress = '';
-      for(var i = 0; i < 12; i++) {
-        macAddress += String.fromCharCode(dataView.getUint8(macAddressOffset + i));
+      let macAddressBytes = new Uint8Array(macAddressLength);
+      for (let i = 0; i < macAddressLength; i++) {
+        macAddressBytes[i] = dataView.getUint8(macAddressOffset + i);
       }
 
-      // 2. копируем его в три места: 0x28 0x4 0x8004
-      function copyMacAddress(destination) {
-        for(var i = 0; i < 12; i++) {
-          dataView.setUint8(destination + i, macAddress.charCodeAt(i));
+      let offsets = [0x28, 0x4, 0x8004];
+      offsets.forEach(offset => {
+        for (let i = 0; i < macAddressLength; i++) {
+          dataView.setUint8(offset + i, macAddressBytes[i]);
         }
+      });
+
+      let copyFromOffset = 0x8000;
+      let copyLength = 0x8600 - copyFromOffset;
+      let copyToOffset = 0x400;
+
+      for (let i = 0; i < copyLength; i++) {
+        let value = dataView.getUint8(copyFromOffset + i);
+        dataView.setUint8(copyToOffset + i, value);
       }
 
-      copyMacAddress(0x28);
-      copyMacAddress(0x4);
-      copyMacAddress(0x8004);
+      let blob = new Blob([dataView], {type: "application/octet-stream"});
+      let url = URL.createObjectURL(blob);
 
-      // 3. копируем данные из смещения 0x8000-0х8600 и вставляем с заменой на позицию 0x400
-      var sourceStart = 0x8000;
-      var sourceEnd = 0x8600;
-      var destination = 0x400;
-
-      for(var i = 0; i < sourceEnd - sourceStart; i++) {
-        var byte = dataView.getUint8(sourceStart + i);
-        dataView.setUint8(destination + i, byte);
-      }
-
-      var blob = new Blob([dataView], {type: "application/octet-stream"});
-      var url = URL.createObjectURL(blob);
-
-      var downloadLink = document.createElement('a');
-      downloadLink.href = url;
-      downloadLink.download = "keenetic_" + file.name;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+      let link = document.createElement('a');
+      link.href = url;
+      link.download = 'keenetic_' + file.name;
+      link.click();
     };
-
     reader.readAsArrayBuffer(file);
-  }
-</script>
+  };
 
+  document.getElementById('file').addEventListener('change', handleFileSelect, false);
+</script>
 </body>
 </html>
