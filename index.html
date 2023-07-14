@@ -1,55 +1,52 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Beeline to Keenetic eeprom/mtd2 converter</title>
     <style>
         body {
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
             font-family: Arial, sans-serif;
-            padding: 50px;
+            background-color: #F5F5F5;
         }
-
-        .custom-file-input {
+        h1 {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        #file {
             display: none;
         }
-
         label {
             padding: 10px;
             background-color: #4CAF50;
             color: white;
             cursor: pointer;
+            border-radius: 5px;
+            text-transform: uppercase;
         }
-
         label:hover {
             background-color: #45a049;
         }
-
-        h1 {
-            color: #333;
-            font-size: 32px;
-        }
-
         .images {
             display: flex;
             justify-content: center;
-            gap: 50px;
-            margin-bottom: 50px;
-        }
-
-        .images img {
-            width: 200px;
+            gap: 20px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
 <div class="images">
-    <img src="beeline.png" alt="Beeline">
-    <img src="keenetic.png" alt="Keenetic">
+    <img src="beeline.png" width="200px">
+    <img src="keenetic.png" width="200px">
 </div>
 <h1>Beeline to Keenetic eeprom/mtd2 converter</h1>
-<label for="file">Choose a file</label>
-<input class="custom-file-input" type="file" id="file" name="file">
+<label for="file">Choose file</label>
+<input type="file" id="file" name="file">
+
 <script>
   const handleFileSelect = (evt) => {
     let file = evt.target.files[0];
@@ -87,8 +84,11 @@
 
       let link = document.createElement('a');
       link.href = url;
-      link.download = 'keenetic_' + file.name;
+      link.download = 'eeprom.bin';
       link.click();
+
+      // Clear the input to allow the same file to be chosen again
+      evt.target.value = null;
     };
     reader.readAsArrayBuffer(file);
   };
